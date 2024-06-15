@@ -1,30 +1,18 @@
-from flask import Flask
-
-from database.db import *
+from flask import Flask, request
+from flask_cors import CORS
+from routes.user_routes import user_bp
 
 app = Flask(__name__)
+cors = CORS(app, resources={r"/user/*": {"origins": "http://localhost:3000"}})
+
+app.register_blueprint(user_bp)
 
 
 @app.route('/')
+@app.route('/home')
 def index():
-    return 0
+    return "Hello, World!"
 
 
-@app.route('/user/create', methods = ['GET', 'POST'])
-def userCreate():
-    return 0
-
-
-@app.route('/user/read', methods = ['GET'])
-def userRead():
-    return 0
-
-
-@app.route('/user/update', methods = ['GET', 'PUT']) # Verificar a viabilidade de PUT ou PATCH
-def userUpdate():
-    return 0
-
-
-@app.route('/user/delete', methods = ['GET'])
-def userDelete():
-    return 0
+if __name__ == '__main__':
+    app.run(debug=True)
