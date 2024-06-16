@@ -68,3 +68,62 @@ def user_update():
 
 def user_delete():
     pass
+
+
+# Service database
+
+# funções relacionadas ao database para serviços
+def service_create_db(name, email, description, phone):
+    query = "INSERT INTO services(name, email, description, phone) VALUES (?, ?, ?, ?)"
+
+    with get_db_connection() as conn:
+        if conn:
+            try:
+                cur = conn.cursor()
+                cur.execute(query, (name, email, description, phone))
+                conn.commit()
+                print("Service created successfully")
+                return {"message": "Service created successfully"}
+            except mariadb.Error as err:
+                print(f"Error: {err}")
+                return {"error": str(err)}, 500
+        else:
+            return {"error": "Database connection failed"}, 500
+
+
+def service_read_db():
+    query = "SELECT id, name, email, description, phone FROM services"
+
+    with get_db_connection() as conn:
+        try:
+            cur = conn.cursor()
+            cur.execute(query)
+            data = cur.fetchall()
+            return data
+        except mariadb.Error as err:
+            print(f"Error: {err}")
+            return {"error": str(err)}, 500
+
+
+def service_update_db(service_id, name, email, description, phone):
+    query = "UPDATE services SET name = ?, email = ?, description = ?, phone = ? WHERE id = ?"
+
+    with get_db_connection() as conn:
+        if conn:
+            try:
+                cur = conn.cursor()
+                cur.execute(query, (name, email, description, phone, service_id))
+                conn.commit()
+                if cur.rowcount == 0:
+                    return {"error": "Service not found"}, 404
+                print("Service updated successfully")
+                return {"message": "Service updated successfully"}
+            except mariadb.Error as err:
+                print(f"Error: {err}")
+                return {"error": str(err)}, 500
+        else:
+            return {"error": "Database connection failed"}, 500
+
+
+def service_delete_db(service_id):
+    pass
