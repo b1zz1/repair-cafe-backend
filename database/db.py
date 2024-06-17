@@ -49,31 +49,55 @@ def user_create(name, email, password, salt, birth_date):
             return {"error": "Database connection failed"}, 500
 
 
-def user_read():
+def user_read(id):
     query = "SELECT name, email, password, salt, creation_date FROM users WHERE id = ?"
 
     with get_db_connection() as conn:
         try:
             cur = conn.cursor()
-            cur.execute(query, (1,))
+            cur.execute(query, (id,))
             data = cur.fetchone()
             return data
         except mariadb.Error as err:
             print(f"Error: {err}"), 500
 
 
-def user_update():
-    pass
+def user_update(id, name, email, password, birth_date):
+    query = "UPDATE users SET name = COALESCE(?, name), email = COALESCE(?, email), password = COALESCE(?, password), birth_date = COALESCE(?, birth_date) WHERE id = ?"
+
+    with get_db_connection() as conn:
+        if conn:
+            try:
+                cur = conn.cursor()
+                cur.execute(query, (name, email, password, birth_date, id))
+                conn.commit()
+                return {"message": "User updated successfully"}
+            except mariadb.Error as err:
+                print(f"Error: {err}")
+                return {"error": str(err)}
+        else:
+            return {"error": "Database connection failed"}, 500
 
 
-def user_delete():
-    pass
+def user_delete(id):
+    query = "UPDATE users SET is_active = 0 WHERE id = ?"
+
+    with get_db_connection() as conn:
+        if conn:
+            try:
+                cur = conn.cursor()
+                cur.execute(query, (id,))
+                conn.commit()
+                return {"message": "User soft deleted successfully"}
+            except mariadb.Error as err:
+                print(f"Error: {err}")
+                return {"error": str(err)}
+        else:
+            return {"error": "Database connection failed"}, 500
 
 
-# Service database
-
-# funções relacionadas ao database para serviços
-def service_create_db(name, email, description, phone):
+# manipulação de serviços
+def service_create(name, email, description, phone):
     query = "INSERT INTO services(name, email, description, phone) VALUES (?, ?, ?, ?)"
 
     with get_db_connection() as conn:
@@ -91,8 +115,22 @@ def service_create_db(name, email, description, phone):
             return {"error": "Database connection failed"}, 500
 
 
-def service_read_db():
-    query = "SELECT id, name, email, description, phone FROM services"
+def service_read(id):
+    query = "SELECT id, name, email, description, phone FROM services WHERE id = ?"
+
+    with get_db_connection() as conn:
+        try:
+            cur = conn.cursor()
+            cur.execute(query, (id,))
+            data = cur.fetchall()
+            return data
+        except mariadb.Error as err:
+            print(f"Error: {err}")
+            return {"error": str(err)}, 500
+
+
+def service_read_all():
+    query = "SELECT id, name, email, description, phone FROM services WHERE is_active = 1"
 
     with get_db_connection() as conn:
         try:
@@ -105,14 +143,14 @@ def service_read_db():
             return {"error": str(err)}, 500
 
 
-def service_update_db(service_id, name, email, description, phone):
-    query = "UPDATE services SET name = ?, email = ?, description = ?, phone = ? WHERE id = ?"
+def service_update(id, name, email, description, phone):
+    query = "UPDATE services SET name = COALESCE(?, name), email = COALESCE(?, email), description = COALESCE(?, description), phone = COALESCE(?, phone) WHERE id = ?"
 
     with get_db_connection() as conn:
         if conn:
             try:
                 cur = conn.cursor()
-                cur.execute(query, (name, email, description, phone, service_id))
+                cur.execute(query, (name, email, description, phone, id))
                 conn.commit()
                 if cur.rowcount == 0:
                     return {"error": "Service not found"}, 404
@@ -125,5 +163,18 @@ def service_update_db(service_id, name, email, description, phone):
             return {"error": "Database connection failed"}, 500
 
 
-def service_delete_db(service_id):
-    pass
+def service_delete(id):
+    query = "UPDATE services SET is_active = 0 WHERE id = ?"
+
+    with get_db_connection() as conn:
+        if conn:
+            try:
+                cur = conn.cursor()
+                cur.execute(query, (id,))
+                conn.commit()
+                return {"message": "Service soft deleted successfully"}
+            except mariadb.Error as err:
+                print(f"Error: {err}")
+                return {"error": str(err)}
+        else:
+            return {"error": "Database connection failed"}, 500
