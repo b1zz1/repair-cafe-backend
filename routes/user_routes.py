@@ -20,16 +20,33 @@ def userCreate():
 
 @user_bp.route('/user/read', methods=['GET'])
 def userRead():
-    user = user_read()
+    data = request.get_json()
+    id = data.get('id')
+
+    user = user_read(id)
 
     return jsonify(user)
 
 
-@user_bp.route('/user/update', methods=['GET', 'PUT'])
+@user_bp.route('/user/update', methods=['PUT'])
 def userUpdate():
-    pass
+    data = request.get_json()
+    id = data.get('id')
+    name = data.get('name')
+    email = data.get('email')
+    password = data.get('password')
+    birth_date = "2004-09-04"
+
+    response = user_update(id, name, email, password, birth_date)
+
+    return jsonify(response)
 
 
-@user_bp.route('/user/delete', methods=['GET'])
+@user_bp.route('/user/delete', methods=['PATCH'])
 def userDelete():
-    pass
+    data = request.get_json()
+    id = data.get('id')
+
+    response = user_delete(id)
+
+    return jsonify(response)
