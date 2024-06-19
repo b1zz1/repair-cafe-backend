@@ -1,32 +1,35 @@
 import pytest
 from utils.security import generate_salt, hash_password
+import pytest
+import mariadb
 
-@pytest.fixture
-def user1():
-    """
-    Define o user1
-    """
-    salt = generate_salt()
-    user1 = {
-        "name": "João",
-        "email": "joaozinho@gmail.com",
-        "salt": salt,
-        "password": hash_password("123456", salt),
-        "birth_date": "2004-01-24"
-    }
-    yield user1
+@pytest.fixture(scope="module")
+def db_connection():
+    conn = mariadb.connect(
+        user="root",
+        password="",
+        host="localhost",
+        port=3306,
+        database="pac_test"
+    )
+    yield conn
+    conn.close()
 
-@pytest.fixture
-def user2():
-    """
-    Define o user2
-    """
-    salt = generate_salt()
-    user2 = {
-        "name": "Maria",
-        "email": "mariazinha@gmail.com",
-        "salt": salt,
-        "password": hash_password("123456", salt),
-        "birth_date": "2015-10-12"
-    }
-    yield user2
+def get_db_connection():
+    return mariadb.connect(
+        user="root",
+        password="",
+        host="localhost",
+        port=3306,
+        database="pac_test"
+    )
+
+
+# Fixture para limpar o banco de dados antes de cada teste
+@pytest.fixture(autouse=True)
+def clean_database():
+    connection = get_db_connection()  # Use sua função get_db_connection() ou outra maneira de obter a conexão
+    cursor = connection.cursor()
+    cursor.execute("DELETE FROM services")
+    connection.commit()
+    connection.close()

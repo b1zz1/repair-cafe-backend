@@ -50,7 +50,7 @@ def user_create(name, email, password, salt, birth_date):
 
 
 def user_read(id):
-    query = "SELECT name, email, password, salt, creation_date FROM users WHERE id = ?"
+    query = "SELECT name, email, password, salt, birth_date FROM users WHERE id = ?"
 
     with get_db_connection() as conn:
         try:
@@ -59,7 +59,8 @@ def user_read(id):
             data = cur.fetchone()
             return data
         except mariadb.Error as err:
-            print(f"Error: {err}"), 500
+            print(f"Error: {err}")
+            return None, 500
 
 
 def user_update(id, name, email, password, birth_date):
@@ -103,11 +104,22 @@ def service_create(name, email, description, phone):
     with get_db_connection() as conn:
         if conn:
             try:
+                # Verifica se o email já existe
                 cur = conn.cursor()
+                cur.execute("SELECT id FROM services WHERE email = ?", (email,))
+                existing_service = cur.fetchone()
+                if existing_service:
+                    return {"error": f"O email '{email}' já está sendo utilizado por outro serviço"}, 409
+
+                # Se o email não existir, cria o serviço
                 cur.execute(query, (name, email, description, phone))
                 conn.commit()
-                print("Service created successfully")
-                return {"message": "Service created successfully"}
+
+                # Recupera o ID do serviço criado
+                service_id = cur.lastrowid
+
+                print("Service created successfully with ID:", service_id)
+                return service_id  # Retorna o ID do serviço criado
             except mariadb.Error as err:
                 print(f"Error: {err}")
                 return {"error": str(err)}, 500
@@ -122,11 +134,11 @@ def service_read(id):
         try:
             cur = conn.cursor()
             cur.execute(query, (id,))
-            data = cur.fetchall()
-            return data
+            data = cur.fetchone()
+            return data  # Retorna os dados do serviço ou None se não encontrado
         except mariadb.Error as err:
             print(f"Error: {err}")
-            return {"error": str(err)}, 500
+            return None
 
 
 def service_read_all():
@@ -143,6 +155,7 @@ def service_read_all():
             return {"error": str(err)}, 500
 
 
+# Atualização da função service_update para retornar -1 em caso de erro
 def service_update(id, name, email, description, phone):
     query = "UPDATE services SET name = COALESCE(?, name), email = COALESCE(?, email), description = COALESCE(?, description), phone = COALESCE(?, phone) WHERE id = ?"
 
@@ -152,17 +165,20 @@ def service_update(id, name, email, description, phone):
                 cur = conn.cursor()
                 cur.execute(query, (name, email, description, phone, id))
                 conn.commit()
+
                 if cur.rowcount == 0:
-                    return {"error": "Service not found"}, 404
+                    return 0  # Retorna 0 se nenhum serviço foi atualizado
+
                 print("Service updated successfully")
-                return {"message": "Service updated successfully"}
+                return cur.rowcount  # Retorna o número de linhas atualizadas
             except mariadb.Error as err:
                 print(f"Error: {err}")
-                return {"error": str(err)}, 500
+                return -1  # Retorna -1 em caso de erro de banco de dados
         else:
-            return {"error": "Database connection failed"}, 500
+            return -1  # Retorna -1 se a conexão com o banco de dados falhar
 
 
+# Atualização da função service_delete para retornar -1 em caso de erro
 def service_delete(id):
     query = "UPDATE services SET is_active = 0 WHERE id = ?"
 
@@ -172,9 +188,10 @@ def service_delete(id):
                 cur = conn.cursor()
                 cur.execute(query, (id,))
                 conn.commit()
-                return {"message": "Service soft deleted successfully"}
+                return cur.rowcount  # Retorna o número de linhas afetadas
             except mariadb.Error as err:
                 print(f"Error: {err}")
-                return {"error": str(err)}
+                return -1  # Retorna -1 em caso de erro
         else:
-            return {"error": "Database connection failed"}, 500
+            return -1  # Retorna -1 se a conexão falhar
+

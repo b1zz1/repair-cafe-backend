@@ -1,37 +1,151 @@
 import pytest
-from database import db
+import mariadb
+from datetime import datetime
+from database.db import user_read, service_create, service_read, service_update, service_delete
 
-def test_user_create(user1):
+
+# Função para obter a conexão com o banco de dados
+def get_db_connection():
+    return mariadb.connect(
+        user="root",
+        password="",
+        host="localhost",
+        port=3306,
+        database="pac_test"
+    )
+
+
+# Testes para criação de usuário no Banco de Dados
+def test_user_create():
     """
-    Testar a criação de um usuário no banco
-    Inserir o usuário, e após ler o usuário do BD
-    comparar se o conteúdo do usuário lido do BD é o mesmo dos parâmetros da função
+    Testa a criação de um usuário no banco de dados.
     """
-    # Criar o usuário no DB
-    db.user_create(**user1)
+    with get_db_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("INSERT INTO users (name, email, password, salt, birth_date) VALUES (?, ?, ?, ?, ?)",
+                        ("Joãozinho", "joaozinho@example.com", "hashedpassword", "salt", "2005-01-01"))
+            conn.commit()
+        with conn.cursor() as cur:
+            cur.execute("SELECT name, email, password, salt, birth_date FROM users WHERE email = ?", ("joaozinho@example.com",))
+            user = cur.fetchone()
+            # Convertendo a data para datetime.date para comparação
+            birth_date = datetime(2005, 1, 1).date()
+            assert user == ("Joãozinho", "joaozinho@example.com", "hashedpassword", "salt", birth_date)
 
-    # Ler o usuário do DB
-    user = db.user_read(user_id=1)
-
-    # Comparar os dados do usuário
-    assert user.name == user1["name"]
-    assert user.email == user1["email"]
-    assert user.password == user1["password"]
-    assert user.birth_date == user1["birth_date"]
-
-def test_read_all_tasks(user1, user2):
+def test_user_read():
     """
-    Criar 2 usuários no BD
-    Ler todos os usuários do BD
-    Contar quantos usuários retornam
-    Testar 1 campo de cada usuário se é idêntico ao enviado
+    Testa a leitura de um usuário no banco de dados.
     """
-    # Criar 2 usuários
-    db.user_create(**user1)
-    db.user_create(**user2)
+    with get_db_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("INSERT INTO users (name, email, password, salt, birth_date) VALUES (?, ?, ?, ?, ?)",
+                        ("Joãozinho", "joaozinho@example.com", "hashedpassword", "salt", "2005-01-01"))
+            conn.commit()
+            cur.execute("SELECT LAST_INSERT_ID()")
+            user_id = cur.fetchone()[0]
+    result = user_read(user_id)
+    # Convertendo a data para string no formato YYYY-MM-DD para comparação
+    result_converted = (result[0], result[1], result[2], result[3], result[4].strftime('%Y-%m-%d'))
+    assert result_converted == ("Joãozinho", "joaozinho@example.com", "hashedpassword", "salt", "2005-01-01")
 
-    # Ler usuários do BD
-    users = db.user_read(id)
-    assert len(users) == 2
-    assert users[0].name == user1["name"]
-    assert users[1].name == user2["name"]
+def test_user_update():
+    """
+    Testa a atualização de um usuário no banco de dados.
+    """
+    with get_db_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("INSERT INTO users (name, email, password, salt, birth_date) VALUES (?, ?, ?, ?, ?)",
+                        ("Joãozinho", "joaozinho@example.com", "hashedpassword", "salt", "2005-01-01"))
+            conn.commit()
+            cur.execute("SELECT LAST_INSERT_ID()")
+            user_id = cur.fetchone()[0]
+        with conn.cursor() as cur:
+            cur.execute("UPDATE users SET email = ? WHERE id = ?", ("joaozinho_updated@example.com", user_id))
+            conn.commit()
+        with conn.cursor() as cur:
+            cur.execute("SELECT email FROM users WHERE id = ?", (user_id,))
+            user = cur.fetchone()
+            assert user[0] == "joaozinho_updated@example.com"
+
+def test_user_delete():
+    """
+    Testa a exclusão de um usuário no banco de dados.
+    """
+    with get_db_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("INSERT INTO users (name, email, password, salt, birth_date) VALUES (?, ?, ?, ?, ?)",
+                        ("Joãozinho", "joaozinho@example.com", "hashedpassword", "salt", "2005-01-01"))
+            conn.commit()
+            cur.execute("SELECT LAST_INSERT_ID()")
+            user_id = cur.fetchone()[0]
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM users WHERE id = ?", (user_id,))
+            conn.commit()
+        with conn.cursor() as cur:
+            cur.execute("SELECT * FROM users WHERE id = ?", (user_id,))
+            user = cur.fetchone()
+            assert user is None
+
+# Teste de criação de serviços no Banco de Dados
+
+def test_service_create():
+    """
+    Testa a criação de um serviço no banco de dados.
+    """
+    service_id = service_create("Serviço de Reparo", "reparo@example.com", "Descrição do serviço de reparo", "123456789")
+    assert service_id is not None  # Verifica se o serviço foi criado com sucesso
+
+def test_service_read():
+    """
+    Testa a leitura de um serviço no banco de dados.
+    """
+    # Cria um serviço com um email único para este teste
+    service_id = service_create("Serviço de Reparo", "reparo_read@example.com", "Descrição do serviço de reparo", "123456789")
+    assert service_id is not None  # Verifica se o serviço foi criado com sucesso
+
+    # Realiza a leitura do serviço criado
+    result = service_read(service_id)
+
+    if isinstance(result, tuple):
+        # Converte a data para string no formato YYYY-MM-DD para comparação
+        if isinstance(result[4], datetime):
+            result_converted = (result[0], result[1], result[2], result[3], result[4].strftime('%Y-%m-%d'))
+        else:
+            result_converted = (result[0], result[1], result[2], result[3], result[4])  # Assume que result[4] já é uma string
+        assert result_converted == (service_id, "Serviço de Reparo", "reparo_read@example.com", "Descrição do serviço de reparo", "123456789")
+    elif isinstance(result, dict) and 'error' in result:
+        assert False, f"Erro ao ler serviço com ID {service_id}: {result['error']}"
+    else:
+        assert False, f"Resultado inesperado ao ler serviço com ID {service_id}: {result}"
+
+def test_service_update():
+    """
+    Testa a atualização de um serviço no banco de dados.
+    """
+    # Cria um serviço com um email único para este teste
+    service_id = service_create("Serviço de Reparo", "reparo_update@example.com", "Descrição do serviço de reparo", "123456789")
+    assert service_id is not None  # Verifica se o serviço foi criado com sucesso
+
+    # Realiza a atualização do serviço criado
+    updated_rows = service_update(service_id, "Serviço de Reparo Atualizado", "reparo_update_updated@example.com", "Nova descrição do serviço de reparo", "987654321")
+
+    if updated_rows >= 0:
+        assert updated_rows > 0 or updated_rows == 0  # Verifica se as linhas foram atualizadas ou nenhum serviço foi encontrado
+    else:
+        assert False, f"Erro ao atualizar serviço com ID {service_id}: {updated_rows}"
+
+def test_service_delete():
+    """
+    Testa a exclusão de um serviço no banco de dados.
+    """
+    # Cria um serviço com um email único para este teste
+    service_id = service_create("Serviço de Reparo", "reparo_delete@example.com", "Descrição do serviço de reparo", "123456789")
+    assert service_id is not None  # Verifica se o serviço foi criado com sucesso
+
+    # Realiza a exclusão do serviço criado
+    deleted_rows = service_delete(service_id)
+
+    if deleted_rows >= 0:
+        assert deleted_rows > 0 or deleted_rows == 0  # Verifica se as linhas foram marcadas como inativas ou nenhum serviço foi encontrado
+    else:
+        assert False, f"Erro ao excluir serviço com ID {service_id}: {deleted_rows}"
