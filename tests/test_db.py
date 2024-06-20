@@ -1,7 +1,10 @@
+from unittest.mock import patch
+
 import pytest
 import mariadb
 from datetime import datetime
-from database.db import user_read, service_create, service_read, service_update, service_delete
+from database.db import user_read, service_create, service_read, service_update, service_delete, create_connection, \
+    user_create, user_update
 
 
 # Função para obter a conexão com o banco de dados
@@ -13,6 +16,11 @@ def get_db_connection():
         port=3306,
         database="pac_test"
     )
+
+def test_create_connection_failure():
+    with patch('database.db.mariadb.connect', side_effect=mariadb.Error("Connection Error")):
+        result = create_connection()
+        assert result == 1
 
 
 # Testes para criação de usuário no Banco de Dados
@@ -32,6 +40,24 @@ def test_user_create():
             birth_date = datetime(2005, 1, 1).date()
             assert user == ("Joãozinho", "joaozinho@example.com", "hashedpassword", "salt", birth_date)
 
+
+@pytest.mark.xfail(raises=mariadb.Error)
+def test_user_create_existing_email():
+    """
+    Testa a criação de usuário com um email que já existe no banco de dados.
+    Esperamos que a função user_create lance um mariadb.Error.
+    """
+    # Defina os parâmetros com um email que já existe no banco de dados
+    name = "Joãozinho"
+    email = "joaozinho@example.com"  # Email que já existe (simulado)
+    password = "hashedpassword"
+    salt = "salt"
+    birth_date = "2005-01-01"
+
+    # Chama a função user_create e espera que ela lance um mariadb.Error
+    user_create(name, email, password, salt, birth_date)
+
+
 def test_user_read():
     """
     Testa a leitura de um usuário no banco de dados.
@@ -47,6 +73,30 @@ def test_user_read():
     # Convertendo a data para string no formato YYYY-MM-DD para comparação
     result_converted = (result[0], result[1], result[2], result[3], result[4].strftime('%Y-%m-%d'))
     assert result_converted == ("Joãozinho", "joaozinho@example.com", "hashedpassword", "salt", "2005-01-01")
+
+
+def test_user_read_nonexistent_id():
+    """
+    Testa a função user_read quando é fornecido um ID que não existe no banco de dados.
+    Esperamos que a função retorne None.
+    """
+    # Chama a função user_read com um ID que não existe no banco de dados
+    result = user_read(9999)  # Supondo que 9999 não existe no banco de dados
+
+    # Verifica se a função retornou None
+    assert result is None
+
+def test_user_read_database_error():
+    """
+    Testa a função user_read quando ocorre um erro de banco de dados.
+    Esperamos que a função retorne None.
+    """
+    # Chama a função user_read com um tipo de ID que cause um erro de banco de dados
+    result = user_read("invalid_id_type")  # Simulando um tipo de ID que causa erro
+
+    # Verifica se a função retornou None
+    assert result is None
+
 
 def test_user_update():
     """
@@ -66,6 +116,11 @@ def test_user_update():
             cur.execute("SELECT email FROM users WHERE id = ?", (user_id,))
             user = cur.fetchone()
             assert user[0] == "joaozinho_updated@example.com"
+
+
+def test_user_update_error():
+    pass
+
 
 def test_user_delete():
     """

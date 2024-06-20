@@ -20,6 +20,7 @@ def create_connection():
         print(f"Error connecting to MariaDB: {err}")
         return 1
 
+
 @contextmanager
 def get_db_connection():
     conn = create_connection()
@@ -49,20 +50,22 @@ def user_create(name, email, password, salt, birth_date):
             return {"error": "Database connection failed"}, 500
 
 
+# Exemplo de função user_read para ler um usuário do banco de dados
 def user_read(id):
     query = "SELECT name, email, password, salt, birth_date FROM users WHERE id = ?"
 
-    with get_db_connection() as conn:
-        try:
+    try:
+        with get_db_connection() as conn:
             cur = conn.cursor()
             cur.execute(query, (id,))
             data = cur.fetchone()
             return data
-        except mariadb.Error as err:
-            print(f"Error: {err}")
-            return None, 500
+    except mariadb.Error as err:
+        print(f"Error: {err}")
+        return None, 500  # Retornar uma tupla com None e o código de status 500 em caso de erro
 
 
+# Atualizar o usuário no BD
 def user_update(id, name, email, password, birth_date):
     query = "UPDATE users SET name = COALESCE(?, name), email = COALESCE(?, email), password = COALESCE(?, password), birth_date = COALESCE(?, birth_date) WHERE id = ?"
 
