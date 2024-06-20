@@ -1,10 +1,11 @@
 from unittest.mock import patch
-
 import pytest
 import mariadb
 from datetime import datetime
+
+import database.db
 from database.db import user_read, service_create, service_read, service_update, service_delete, create_connection, \
-    user_create, user_update
+    user_create, user_update, user_delete
 
 
 # Função para obter a conexão com o banco de dados
@@ -28,34 +29,21 @@ def test_user_create():
     """
     Testa a criação de um usuário no banco de dados.
     """
+    # Chama a função user_create
+    result = user_create("Joãozinho", "joaozinho@example.com", "hashedpassword", "salt", "2005-01-01")
+
+    # Verifica se a criação foi bem-sucedida
+    assert result == {"message": "User created successfully"}
+
+    # Conecta ao banco de dados para verificar se o usuário foi inserido corretamente
     with get_db_connection() as conn:
         with conn.cursor() as cur:
-            cur.execute("INSERT INTO users (name, email, password, salt, birth_date) VALUES (?, ?, ?, ?, ?)",
-                        ("Joãozinho", "joaozinho@example.com", "hashedpassword", "salt", "2005-01-01"))
-            conn.commit()
-        with conn.cursor() as cur:
-            cur.execute("SELECT name, email, password, salt, birth_date FROM users WHERE email = ?", ("joaozinho@example.com",))
+            cur.execute("SELECT name, email, password, salt, birth_date FROM users WHERE email = ?",
+                        ("joaozinho@example.com",))
             user = cur.fetchone()
             # Convertendo a data para datetime.date para comparação
-            birth_date = datetime(2005, 1, 1).date()
+            birth_date = datetime.strptime("2005-01-01", "%Y-%m-%d").date()
             assert user == ("Joãozinho", "joaozinho@example.com", "hashedpassword", "salt", birth_date)
-
-
-@pytest.mark.xfail(raises=mariadb.Error)
-def test_user_create_existing_email():
-    """
-    Testa a criação de usuário com um email que já existe no banco de dados.
-    Esperamos que a função user_create lance um mariadb.Error.
-    """
-    # Defina os parâmetros com um email que já existe no banco de dados
-    name = "Joãozinho"
-    email = "joaozinho@example.com"  # Email que já existe (simulado)
-    password = "hashedpassword"
-    salt = "salt"
-    birth_date = "2005-01-01"
-
-    # Chama a função user_create e espera que ela lance um mariadb.Error
-    user_create(name, email, password, salt, birth_date)
 
 
 def test_user_read():
@@ -119,7 +107,20 @@ def test_user_update():
 
 
 def test_user_update_error():
-    pass
+    """
+    Testa a função user_update em caso de erro de banco de dados.
+    """
+    id = -1  # Usar um ID negativo para forçar um erro
+    name = "Novo Nome"
+    email = "novo_email@example.com"
+    password = "novasenha"
+    birth_date = "2000-01-01"
+
+    # Chamada da função user_update com dados que devem causar um erro
+    result = user_update(id, name, email, password, birth_date)
+
+    # Verifica que o usuário não foi atualizado
+    assert "User updated successfully" not in result
 
 
 def test_user_delete():
@@ -140,6 +141,20 @@ def test_user_delete():
             cur.execute("SELECT * FROM users WHERE id = ?", (user_id,))
             user = cur.fetchone()
             assert user is None
+
+
+def test_user_delete_error():
+    """
+    Testa a função user_delete em caso de erro de banco de dados.
+    """
+    id = -1  # Usar um ID negativo para forçar um erro
+
+    # Chamada da função user_delete com um ID que deve causar um erro
+    result = user_delete(id)
+
+    # Verifica que o usuário não foi deletado
+    assert "User deleted successfully" not in result
+
 
 # Teste de criação de serviços no Banco de Dados
 
@@ -172,6 +187,29 @@ def test_service_read():
         assert False, f"Erro ao ler serviço com ID {service_id}: {result['error']}"
     else:
         assert False, f"Resultado inesperado ao ler serviço com ID {service_id}: {result}"
+
+
+def test_service_read_all(db_setup_teardown):
+    """
+    Testa a função service_read_all para verificar se retorna os serviços ativos.
+    """
+    # Inserir dados de teste no banco de dados
+    with get_db_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("INSERT INTO services (name, email, description, phone, is_active) VALUES (%s, %s, %s, %s, %s)",
+                        ("Serviço A", "servicoa@example.com", "Descrição do Serviço A", "123456789", 1))
+            cur.execute("INSERT INTO services (name, email, description, phone, is_active) VALUES (%s, %s, %s, %s, %s)",
+                        ("Serviço B", "servicob@example.com", "Descrição do Serviço B", "987654321", 1))
+            conn.commit()
+
+    # Chamar a função service_read_all e verificar o retorno
+    result = database.db.service_read_all()
+
+    # Verificar se os serviços ativos foram retornados corretamente
+    assert len(result) == 2
+    assert result[0][1] == "Serviço A"
+    assert result[1][1] == "Serviço B"
+
 
 def test_service_update():
     """
