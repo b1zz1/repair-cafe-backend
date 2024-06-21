@@ -8,13 +8,14 @@ user_bp = Blueprint('user_bp', __name__)
 @user_bp.route('/user/create', methods=['POST'])
 def userCreate():
     data = request.get_json()
-    name = data['name']
-    surname = data['surname']
-    email = data['email']
+    name = data.get('name')
+    surname = data.get('surname')
+    email = data.get('email')
+    birth_date = data.get('birth_date')
     salt = generate_salt()
-    password = hash_password(data['password'], salt)
+    password = hash_password(data.get('password'), salt)
 
-    response = user_create(name, surname, email, password, salt, "2005-01-01")
+    response = user_create(name, surname, email, password, salt, birth_date )
 
     return jsonify(response)
 
@@ -26,16 +27,17 @@ def userRead(id):
     return jsonify(user)
 
 
-@user_bp.route('/user/update', methods=['PUT'])
-def userUpdate():
+@user_bp.route('/user/update/<int:id>', methods=['PUT'])
+def userUpdate(id):
     data = request.get_json()
-    id = data.get('id')
     name = data.get('name')
+    surname = data.get('surname')
     email = data.get('email')
-    password = data.get('password')
-    birth_date = "2004-09-04"
+    birth_date = data.get('birth_date')
+    salt = generate_salt()
+    password = hash_password(data['password'], salt)
 
-    response = user_update(id, name, email, password, birth_date)
+    response = user_update(id, name, surname, email, password, birth_date)
 
     return jsonify(response)
 

@@ -1,12 +1,13 @@
 # para as funções relacionadas ao database, utilize o padrão snake case
 # considere para nomenclatura a tabela a ser afetada e o comando. Por exemplo, criar usuário: def user_create()
 from contextlib import contextmanager
+from typing import Optional
 
 import mariadb
 from flask import jsonify
 
 
-def create_connection():
+def create_connection() -> Optional[mariadb.Connection]:
     try:
         conn = mariadb.connect(
             user="root",
@@ -18,7 +19,8 @@ def create_connection():
         return conn
     except mariadb.Error as err:
         print(f"Error connecting to MariaDB: {err}")
-        return 1
+        return None
+
 
 @contextmanager
 def get_db_connection():
@@ -50,26 +52,39 @@ def user_create(name, surname, email, password, salt, birth_date):
 
 
 def user_read(id):
-    query = "SELECT name, email, password, salt, creation_date FROM users WHERE id = ?"
+    query = "SELECT name, surname, email, password, salt, birth_date, creation_date FROM users WHERE id = ?"
 
     with get_db_connection() as conn:
         try:
             cur = conn.cursor()
             cur.execute(query, (id,))
-            data = cur.fetchone()
-            return data
+            row = cur.fetchone()
+
+            if row:
+                user_data = {
+                    'name': row[0],
+                    'surname': row[1],
+                    'email': row[2],
+                    'password': row[3],
+                    'salt': row[4],
+                    "birth_date": row[5].strftime('%Y-%m-%d') if row[5] else None,
+                    'creation_date': row[6],
+                }
+                return user_data
+            else:
+                return None  # or raise an exception if user with the given ID is not found
         except mariadb.Error as err:
             print(f"Error: {err}"), 500
 
 
-def user_update(id, name, email, password, birth_date):
-    query = "UPDATE users SET name = COALESCE(?, name), email = COALESCE(?, email), password = COALESCE(?, password), birth_date = COALESCE(?, birth_date) WHERE id = ?"
+def user_update(id, name, surname, email, password, birth_date):
+    query = "UPDATE users SET name = COALESCE(?, name), surname = COALESCE(?, surname), email = COALESCE(?, email), password = COALESCE(?, password), birth_date = COALESCE(?, birth_date) WHERE id = ?"
 
     with get_db_connection() as conn:
         if conn:
             try:
                 cur = conn.cursor()
-                cur.execute(query, (name, email, password, birth_date, id))
+                cur.execute(query, (name, surname, email, password, birth_date, id))
                 conn.commit()
                 return {"message": "User updated successfully"}
             except mariadb.Error as err:
