@@ -19,11 +19,8 @@ def userCreate():
     return jsonify(response)
 
 
-@user_bp.route('/user/read', methods=['GET'])
-def userRead():
-    data = request.get_json()
-    id = data.get('id')
-
+@user_bp.route('/user/read/<int:id>', methods=['GET'])
+def userRead(id):
     user = user_read(id)
 
     return jsonify(user)

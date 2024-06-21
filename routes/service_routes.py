@@ -10,7 +10,7 @@ def serviceCreate():
     name = data.get('name')
     email = data.get('email')
     description = data.get('description')
-    phone = data.get('phone')
+    phone = data.get('whatsapp')
 
     response = service_create(name, email, description, phone)
 
