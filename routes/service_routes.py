@@ -27,6 +27,20 @@ def serviceRead():
     return jsonify(service)
 
 
+# @service_bp.route('/service/read-by-expertise', methods=['GET'])
+# def serviceReadByExpertise():
+#     data = service_read_by_expertise()
+#
+#     return jsonify(data)
+
+
+@service_bp.route('/service/read-all-by-expertise', methods=['GET'])
+def serviceReadAllByExpertise():
+    data = service_read_all_by_expertise()
+
+    return jsonify(data)
+
+
 @service_bp.route('/service/read-all', methods=['GET'])
 def ServiceReadAll():
     data = service_read_all()

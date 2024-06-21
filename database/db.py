@@ -31,14 +31,14 @@ def get_db_connection():
 
 
 # manipulação de usuário
-def user_create(name, email, password, salt, birth_date):
-    query = "INSERT INTO users(name, email, password, salt, birth_date) VALUES (?, ?, ?, ?, ?)"
+def user_create(name, surname, email, password, salt, birth_date):
+    query = "INSERT INTO users(name, surname, email, password, salt, birth_date) VALUES (?, ?, ?, ?, ?, ?)"
 
     with get_db_connection() as conn:
         if conn:
             try:
                 cur = conn.cursor()
-                cur.execute(query, (name, email, password, salt, birth_date))
+                cur.execute(query, (name, surname, email, password, salt, birth_date))
                 conn.commit()
                 print("User created successfully")
                 return {"message": "User created successfully"}
@@ -129,6 +129,25 @@ def service_read(id):
             return {"error": str(err)}, 500
 
 
+def service_read_all_by_expertise():
+    query = """
+    SELECT services.id, services.name, services.email, services.description, services.phone, services.owner_id, expertises.name, expertises.description
+    FROM services_expertises 
+    JOIN services ON services_expertises.service_id  = services.id
+    JOIN expertises ON services_expertises.expertise_id = expertises.id 
+    """
+
+    with get_db_connection() as conn:
+        try:
+            cur = conn.cursor()
+            cur.execute(query)
+            data = cur.fetchall()
+            return data
+        except mariadb.Error as err:
+            print(f"Error: {err}")
+            return {"error": str(err)}, 500
+
+
 def service_read_all():
     query = "SELECT id, name, email, description, phone FROM services WHERE is_active = 1"
 
@@ -178,3 +197,18 @@ def service_delete(id):
                 return {"error": str(err)}
         else:
             return {"error": "Database connection failed"}, 500
+
+
+# manipulação de expertise
+def expertise_read_all():
+    query = "SELECT id, name, description FROM services"
+
+    with get_db_connection() as conn:
+        try:
+            cur = conn.cursor()
+            cur.execute(query)
+            data = cur.fetchall()
+            return data
+        except mariadb.Error as err:
+            print(f"Error: {err}")
+            return {"error": str(err)}, 500

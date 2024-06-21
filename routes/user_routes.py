@@ -9,11 +9,12 @@ user_bp = Blueprint('user_bp', __name__)
 def userCreate():
     data = request.get_json()
     name = data['name']
+    surname = data['surname']
     email = data['email']
     salt = generate_salt()
     password = hash_password(data['password'], salt)
 
-    response = user_create(name, email, password, salt, "2005-01-01")
+    response = user_create(name, surname, email, password, salt, "2005-01-01")
 
     return jsonify(response)
 
