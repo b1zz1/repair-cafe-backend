@@ -17,11 +17,8 @@ def serviceCreate():
     return jsonify(response)
 
 
-@service_bp.route('/service/read', methods=['GET'])
-def serviceRead():
-    data = request.get_json()
-    id = data.get('id')
-
+@service_bp.route('/service/read/<int:id>', methods=['GET'])
+def serviceRead(id):
     service = service_read(id)
 
     return jsonify(service)
@@ -48,10 +45,9 @@ def ServiceReadAll():
     return jsonify(data)
 
 
-@service_bp.route('/service/update', methods=['PUT'])
-def serviceUpdate():
+@service_bp.route('/service/update/<int:id>', methods=['PUT'])
+def serviceUpdate(id):
     data = request.get_json()
-    id = data.get('id')
     name = data.get('name')
     email = data.get('email')
     description = data.get('description')
@@ -61,6 +57,19 @@ def serviceUpdate():
 
     return jsonify(response)
 
+# @user_bp.route('/user/update/<int:id>', methods=['PUT'])
+# def userUpdate(id):
+#     data = request.get_json()
+#     name = data.get('name')
+#     surname = data.get('surname')
+#     email = data.get('email')
+#     birth_date = data.get('birth_date')
+#     salt = generate_salt()
+#     password = hash_password(data['password'], salt)
+#
+#     response = user_update(id, name, surname, email, password, birth_date)
+#
+#     return jsonify(response)
 
 @service_bp.route('/service/delete', methods=['PATCH'])
 def serviceDelete():

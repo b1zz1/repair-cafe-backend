@@ -72,7 +72,7 @@ def user_read(id):
                 }
                 return user_data
             else:
-                return None  # or raise an exception if user with the given ID is not found
+                return None
         except mariadb.Error as err:
             print(f"Error: {err}"), 500
 
@@ -131,18 +131,52 @@ def service_create(name, email, description, phone):
 
 
 def service_read(id):
-    query = "SELECT id, name, email, description, phone FROM services WHERE id = ?"
+    query = "SELECT name, email, description, phone FROM services WHERE id = ?"
 
     with get_db_connection() as conn:
         try:
             cur = conn.cursor()
             cur.execute(query, (id,))
-            data = cur.fetchall()
-            return data
-        except mariadb.Error as err:
-            print(f"Error: {err}")
-            return {"error": str(err)}, 500
+            row = cur.fetchone()
 
+            if row:
+                service_data = {
+                    'name': row[0],
+                    'email': row[1],
+                    'description': row[2],
+                    'phone': row[3],
+                }
+                return service_data
+            else:
+                return None
+        except mariadb.Error as err:
+            print(f"Error: {err}"), 500
+
+#
+# def user_read(id):
+#     query = "SELECT name, surname, email, password, salt, birth_date, creation_date FROM users WHERE id = ?"
+#
+#     with get_db_connection() as conn:
+#         try:
+#             cur = conn.cursor()
+#             cur.execute(query, (id,))
+#             row = cur.fetchone()
+#
+#             if row:
+#                 user_data = {
+#                     'name': row[0],
+#                     'surname': row[1],
+#                     'email': row[2],
+#                     'password': row[3],
+#                     'salt': row[4],
+#                     "birth_date": row[5].strftime('%Y-%m-%d') if row[5] else None,
+#                     'creation_date': row[6],
+#                 }
+#                 return user_data
+#             else:
+#                 return None  # or raise an exception if user with the given ID is not found
+#         except mariadb.Error as err:
+#             print(f"Error: {err}"), 500
 
 def service_read_all_by_expertise():
     query = """
@@ -227,3 +261,5 @@ def expertise_read_all():
         except mariadb.Error as err:
             print(f"Error: {err}")
             return {"error": str(err)}, 500
+
+const [card, setCard] = useState("")
