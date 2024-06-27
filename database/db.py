@@ -17,9 +17,9 @@ def create_connection() -> Optional[mariadb.Connection]:
             database="pac_test"
         )
         return conn
-    except mariadb.Error as err:
-        print(f"Error connecting to MariaDB: {err}")
-        return None
+    except mariadb.Error as e:
+        print(f"Error connecting to MariaDB Platform: {e}")
+        raise ValueError("Connection failed, test cannot proceed")
 
 
 @contextmanager
