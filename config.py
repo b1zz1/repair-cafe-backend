@@ -1,0 +1,7 @@
+from database.base import SQLALCHEMY_DATABASE_URL
+
+
+class Config:
+    SQLALCHEMY_DATABASE_URI = SQLALCHEMY_DATABASE_URL
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
+    SECRET_KEY = 'your_secret_key_here'
